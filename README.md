@@ -2,126 +2,110 @@
 
 A scalable microservices backend for a trading exchange platform built with Go, Docker, and Kubernetes.
 
+## 📐 Architecture
+
+The project follows a **Microservices Architecture** with the **Database-per-Service** pattern.
+
+```mermaid
+graph TB
+    Client[Client / Frontend] --> Kong[Kong API Gateway :8000]
+    
+    subgraph "Kubernetes Generic Cluster"
+        Kong -->|/auth| Auth[Auth Service]
+        Kong -->|/orders| Orders[Orders Service]
+        
+        Auth --> AuthDB[(Auth Postgres)]
+        Orders --> OrdersDB[(Orders Postgres)]
+    end
+```
+
+### Key Components
+- **Kong Gateway**: Acts as the single entry point (API Gateway), handling routing, correlation IDs, and CORS.
+- **Auth Service**: Manages user authentication and issues JWTs. Has its own dedicated Postgres database.
+- **Orders Service**: Handles order processing. Has its own dedicated Postgres database.
+- **Skaffold**: Orchestrates increased development velocity with hot-reloading.
+
 ## 📁 Project Structure
 
 ```
 exchange-backend/
-├── services/                    # Microservices
-│   ├── auth/                    # Authentication service
-│   │   ├── cmd/                 # Entry points
-│   │   ├── internal/            # Private packages
-│   │   ├── migrations/          # Database migrations
-│   │   └── Dockerfile
-│   └── orders/                  # Orders service
-│       ├── cmd/
-│       ├── internal/
-│       ├── migrations/
-│       └── Dockerfile
+├── services/                    # Microservices Source Code
+│   ├── auth/                    # Auth Service (Go)
+│   └── orders/                  # Orders Service (Go)
 │
-├── k8s/                         # Kubernetes manifests (Kustomize)
-│   ├── base/                    # Shared base configs
-│   ├── infrastructure/          # Shared infrastructure (Postgres)
-│   ├── services/                # Per-service configs
+├── k8s/                         # Kubernetes Configuration (Kustomize)
+│   ├── base/                    # Common resources (Permissions, Namespaces)
+│   ├── infrastructure/          # Shared Platform Infrastructure
+│   │   ├── kong/                # API Gateway Configuration
+│   │   ├── postgres-auth/       # Dedicated DB for Auth
+│   │   ├── postgres-orders/     # Dedicated DB for Orders
+│   └── services/                # Application Manifests
 │   │   ├── auth/
 │   │   └── orders/
-│   └── overlays/                # Environment-specific
-│       ├── dev/
-│       └── prod/
+│   └── overlays/                # Environment Specifics
+│       ├── dev/                 # Local Development (Hot reload patches)
+│       └── prod/                # Production (High availability)
 │
-├── deploy/                      # Deployment configs
-│   └── docker/                  # Docker Compose for local dev
+├── deploy/                      # Local tooling
+│   └── docker/                  # Docker Compose fallback
 │
-├── skaffold.yaml                # Skaffold for K8s development
-├── go.mod
-└── go.sum
+├── skaffold.yaml                # Main Development Orchestration
+└── Makefile                     # Handy commands
 ```
 
 ## 🚀 Quick Start
 
 ### Prerequisites
+- **Docker Desktop** (with Kubernetes enabled) or **Minikube**
+- **Skaffold** (for the best dev experience)
+- **Go 1.21+** (optional, for local non-container executuon)
 
-- Go 1.21+
-- Docker & Docker Compose
-- kubectl (for Kubernetes)
-- Skaffold (optional, for K8s development)
+### Option 1: Kubernetes Development (Recommended)
 
-### Run with Docker Compose (Local Development)
+We use **Skaffold** to watch your files, rebuild images (using `air` for hot-reload), and redeploy changes instantly.
+
+1. **Start the Dev Environment**:
+   ```bash
+   skaffold dev
+   ```
+   *This will build images, deploy Postgres instances, setup Kong, and start your apps.*
+
+2. **Access the Services**:
+   - **API Gateway**: `http://localhost:9000`
+   - **Auth API**: `http://localhost:9000/auth`
+   - **Orders API**: `http://localhost:9000/orders`
+
+### Option 2: Docker Compose (Legacy/Simple)
+
+If you don't want to use Kubernetes locally:
 
 ```bash
 cd deploy/docker
 docker compose up --build
 ```
-
-**Services:**
-- Auth: http://localhost:8080 (health: `/healthz`)
-- Orders: http://localhost:8081 (health: `/healthz`)
-- Postgres: localhost:5432
-
-### Run with Kubernetes
-
-#### Using Kustomize (Recommended)
-
-```bash
-# Development environment
-kubectl apply -k k8s/overlays/dev
-
-# Production environment
-kubectl apply -k k8s/overlays/prod
-```
-
-#### Using Skaffold
-
-```bash
-# Development (hot reload)
-skaffold dev
-
-# Production build & deploy
-skaffold run -p prod
-```
-
-## 🏗️ Adding a New Service
-
-1. **Create service directory:**
-   ```bash
-   mkdir -p services/newservice/{cmd,internal,migrations}
-   ```
-
-2. **Add Dockerfile** in `services/newservice/Dockerfile`
-
-3. **Add K8s manifests:**
-   ```bash
-   mkdir k8s/services/newservice
-   # Create deployment.yaml, service.yaml, kustomization.yaml
-   ```
-
-4. **Update overlays** to include the new service:
-   ```yaml
-   # k8s/overlays/dev/kustomization.yaml
-   resources:
-     - ../../services/newservice
-   ```
-
-5. **Update skaffold.yaml** with new build artifact
-
-6. **Update docker-compose.yml** if needed
-
-## 📐 Architecture
-
-```mermaid
-graph TB
-    Client --> Auth[Auth Service :8080]
-    Client --> Orders[Orders Service :8081]
-    Auth --> PG[(PostgreSQL)]
-    Orders --> PG
-```
+*Note: This might not reflect the exact production topology as closely as the K8s setup.*
 
 ## 🔧 Configuration
 
-| Variable | Description | Default |
-|----------|-------------|---------|
-| `PORT` | Service port | 8080/8081 |
-| `DATABASE_URL` | Postgres connection string | - |
+### API Gateway Routes
+Routing is defined in `k8s/infrastructure/kong/kong-config.yaml`.
+- `/auth` → `auth-service:8080`
+- `/orders` → `orders-service:8081`
+
+### Database
+Each service connects to its own isolated database schema/instance.
+- **Auth**: `postgres://user:password@postgres-auth:5432/auth_db`
+- **Orders**: `postgres://user:password@postgres-orders:5432/orders_db`
+
+## 🛠 Adding a New Service
+
+1.  **Scaffold**: Copy structure from `services/auth`.
+2.  **Manifests**: Create `k8s/services/new-service`.
+3.  **Database**: If needed, create `k8s/infrastructure/postgres-new-service`.
+4.  **Wire up**:
+    - Add to `k8s/overlays/dev/kustomization.yaml`.
+    - Add route to `k8s/infrastructure/kong/kong-config.yaml`.
+    - Add build config to `skaffold.yaml`.
 
 ## 📝 License
-
 MIT

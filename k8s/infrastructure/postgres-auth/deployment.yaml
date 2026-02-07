@@ -1,20 +1,20 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: postgres
+  name: postgres-auth
   labels:
-    app.kubernetes.io/name: postgres
+    app.kubernetes.io/name: postgres-auth
     app.kubernetes.io/component: database
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: postgres
+      app: postgres-auth
   template:
     metadata:
       labels:
-        app: postgres
-        app.kubernetes.io/name: postgres
+        app: postgres-auth
+        app.kubernetes.io/name: postgres-auth
         app.kubernetes.io/component: database
     spec:
       containers:
@@ -24,12 +24,10 @@ spec:
             - containerPort: 5432
           envFrom:
             - configMapRef:
-                name: postgres-config
+                name: postgres-auth-config
           volumeMounts:
             - name: postgres-data
               mountPath: /var/lib/postgresql/data
-            - name: init-scripts
-              mountPath: /docker-entrypoint-initdb.d
           resources:
             requests:
               memory: "256Mi"
@@ -42,7 +40,7 @@ spec:
               command:
                 - pg_isready
                 - -U
-                - exchange_user
+                - auth_user
             initialDelaySeconds: 30
             periodSeconds: 10
           readinessProbe:
@@ -50,15 +48,9 @@ spec:
               command:
                 - pg_isready
                 - -U
-                - exchange_user
+                - auth_user
             initialDelaySeconds: 5
             periodSeconds: 5
       volumes:
         - name: postgres-data
           emptyDir: {}
-        - name: init-scripts
-          configMap:
-            name: postgres-config
-            items:
-              - key: init.sql
-                path: init.sql

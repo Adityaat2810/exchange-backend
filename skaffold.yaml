@@ -52,12 +52,18 @@ portForward:
     namespace: exchange-backend
     port: 8001
     localPort: 9001
-  # Postgres for development
+  # Postgres Auth for development
   - resourceType: service
-    resourceName: postgres
+    resourceName: postgres-auth
     namespace: exchange-backend
     port: 5432
     localPort: 5432
+  # Postgres Orders for development
+  - resourceType: service
+    resourceName: postgres-orders
+    namespace: exchange-backend
+    port: 5432
+    localPort: 5433
 
 profiles:
   # Production profile - uses optimized multi-stage Dockerfile

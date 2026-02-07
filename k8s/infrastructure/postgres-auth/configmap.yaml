@@ -1,0 +1,12 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: postgres-auth-config
+  labels:
+    app.kubernetes.io/name: postgres-auth
+    app.kubernetes.io/component: database
+data:
+  POSTGRES_DB: auth_db
+  POSTGRES_USER: auth_user
+  # Note: In production, use Secrets for passwords
+  POSTGRES_PASSWORD: auth_password

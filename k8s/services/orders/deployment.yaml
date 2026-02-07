@@ -26,7 +26,7 @@ spec:
             - name: PORT
               value: "8081"
             - name: DATABASE_URL
-              value: postgres://exchange_user:exchange_password@postgres:5432/orders_db?sslmode=disable
+              value: postgres://orders_user:orders_password@postgres-orders:5432/orders_db?sslmode=disable
           resources:
             requests:
               memory: "64Mi"

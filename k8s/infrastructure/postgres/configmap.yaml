@@ -1,0 +1,21 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: postgres-config
+  labels:
+    app.kubernetes.io/name: postgres
+    app.kubernetes.io/component: database
+data:
+  POSTGRES_DB: exchange_db
+  POSTGRES_USER: exchange_user
+  # Note: In production, use Secrets for passwords
+  POSTGRES_PASSWORD: exchange_password
+  # Init script to create multiple databases
+  init.sql: |
+    -- Create databases for each service
+    CREATE DATABASE auth_db;
+    CREATE DATABASE orders_db;
+    
+    -- Grant privileges
+    GRANT ALL PRIVILEGES ON DATABASE auth_db TO exchange_user;
+    GRANT ALL PRIVILEGES ON DATABASE orders_db TO exchange_user;

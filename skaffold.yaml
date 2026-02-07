@@ -1,0 +1,77 @@
+apiVersion: skaffold/v4beta11
+kind: Config
+metadata:
+  name: exchange-backedn
+
+build:
+  local:
+    push: false
+    useBuildkit: true
+  artifacts:
+    # Auth Service - uses dev Dockerfile with hot-reload
+    - image: exchange-backedn-auth
+      context: .
+      docker:
+        dockerfile: services/auth/Dockerfile.dev
+      sync:
+        # Sync Go files directly to container, air watches and rebuilds
+        infer:
+          - "services/auth/**/*.go"
+          - "go.mod"
+          - "go.sum"
+
+    # Orders Service - uses dev Dockerfile with hot-reload
+    - image: exchange-backedn-orders
+      context: .
+      docker:
+        dockerfile: services/orders/Dockerfile.dev
+      sync:
+        infer:
+          - "services/orders/**/*.go"
+          - "go.mod"
+          - "go.sum"
+
+manifests:
+  kustomize:
+    paths:
+      - k8s/overlays/dev
+
+deploy:
+  kubectl: {}
+
+portForward:
+  - resourceType: service
+    resourceName: auth
+    namespace: exchange-backend
+    port: 8080
+    localPort: 8080
+  - resourceType: service
+    resourceName: orders
+    namespace: exchange-backend
+    port: 8081
+    localPort: 8081
+  - resourceType: service
+    resourceName: postgres
+    namespace: exchange-backend
+    port: 5432
+    localPort: 5432
+
+profiles:
+  # Production profile - uses optimized multi-stage Dockerfile
+  - name: prod
+    manifests:
+      kustomize:
+        paths:
+          - k8s/overlays/prod
+    build:
+      local:
+        push: true
+      artifacts:
+        - image: exchange-backedn-auth
+          context: .
+          docker:
+            dockerfile: services/auth/Dockerfile
+        - image: exchange-backedn-orders
+          context: .
+          docker:
+            dockerfile: services/orders/Dockerfile

@@ -1,0 +1,19 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: exchange-backend
+
+resources:
+  - ../../base
+  - ../../infrastructure
+  - ../../services/auth
+  - ../../services/orders
+
+# Development-specific patches
+patches:
+  - target:
+      kind: Deployment
+    patch: |-
+      - op: replace
+        path: /spec/replicas
+        value: 1

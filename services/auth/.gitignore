@@ -1,0 +1,12 @@
+# Build artifacts
+auth
+*.exe
+*.test
+
+# Temporary files
+tmp/
+*.tmp
+*.log
+
+# Air hot-reload
+.air.toml.bak

@@ -1,0 +1,20 @@
+# Development Dockerfile with hot-reload support
+FROM golang:1.24-alpine
+
+# Install air for hot-reload (pinned to version compatible with Go 1.24)
+RUN go install github.com/air-verse/air@v1.61.7
+
+WORKDIR /app
+
+# Copy go mod files
+COPY go.mod go.sum ./
+RUN go mod download
+
+# Copy source code
+COPY services/auth ./services/auth
+
+ENV PORT=8080
+EXPOSE 8080
+
+# Use air for hot-reload in dev
+CMD ["air", "-c", "services/auth/.air.toml"]

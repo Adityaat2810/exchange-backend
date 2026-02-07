@@ -1,0 +1,66 @@
+_format_version: "3.0"
+_transform: true
+
+services:
+  # Auth Service
+  - name: auth-service
+    url: http://auth:8080
+    routes:
+      - name: auth-route
+        paths:
+          - /auth
+        strip_path: true
+        preserve_host: true
+      - name: auth-healthz
+        paths:
+          - /auth/healthz
+        strip_path: false
+
+  # Orders Service
+  - name: orders-service
+    url: http://orders:8081
+    routes:
+      - name: orders-route
+        paths:
+          - /orders
+        strip_path: true
+        preserve_host: true
+      - name: orders-healthz
+        paths:
+          - /orders/healthz
+        strip_path: false
+
+# Global plugins for all services
+plugins:
+  - name: cors
+    config:
+      origins:
+        - "*"
+      methods:
+        - GET
+        - POST
+        - PUT
+        - PATCH
+        - DELETE
+        - OPTIONS
+      headers:
+        - Accept
+        - Authorization
+        - Content-Type
+      exposed_headers:
+        - X-Request-Id
+      credentials: true
+      max_age: 3600
+
+  - name: correlation-id
+    config:
+      header_name: X-Request-Id
+      generator: uuid
+      echo_downstream: true
+
+  - name: rate-limiting
+    config:
+      minute: 100
+      policy: local
+      fault_tolerant: true
+      hide_client_headers: false

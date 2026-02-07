@@ -40,16 +40,19 @@ deploy:
   kubectl: {}
 
 portForward:
+  # Kong Gateway - all traffic goes through here
   - resourceType: service
-    resourceName: auth
+    resourceName: kong-proxy
     namespace: exchange-backend
-    port: 8080
-    localPort: 8080
+    port: 80
+    localPort: 9000
+  # Kong Admin API (for debugging/configuration)
   - resourceType: service
-    resourceName: orders
+    resourceName: kong-admin
     namespace: exchange-backend
-    port: 8081
-    localPort: 8081
+    port: 8001
+    localPort: 9001
+  # Postgres for development
   - resourceType: service
     resourceName: postgres
     namespace: exchange-backend

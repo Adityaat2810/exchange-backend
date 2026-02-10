@@ -4,5 +4,7 @@ kind: Kustomization
 resources:
   - configmap.yaml
   - kong-config.yaml
+  - proto-configmap.yaml
+  - google-api-configmap.yaml
   - deployment.yaml
   - service.yaml

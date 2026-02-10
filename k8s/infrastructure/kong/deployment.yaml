@@ -34,6 +34,13 @@ spec:
             - name: kong-declarative-config
               mountPath: /kong/declarative
               readOnly: true
+            - name: kong-proto-files
+              mountPath: /kong/proto
+              readOnly: true
+            # Mount google/api protos for grpc-gateway annotations
+            - name: kong-google-api-protos
+              mountPath: /usr/local/kong/include/google/api
+              readOnly: true
           resources:
             requests:
               memory: "512Mi"
@@ -61,3 +68,9 @@ spec:
         - name: kong-declarative-config
           configMap:
             name: kong-declarative-config
+        - name: kong-proto-files
+          configMap:
+            name: kong-proto-files
+        - name: kong-google-api-protos
+          configMap:
+            name: kong-google-api-protos

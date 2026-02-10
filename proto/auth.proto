@@ -1,0 +1,60 @@
+syntax = "proto3";
+
+package auth;
+
+option go_package = "exchange-backedn/proto/gen/auth";
+
+import "google/api/annotations.proto";
+
+service AuthService {
+   rpc Signup(SignupRequest) returns (SignupResponse) {
+      option (google.api.http) = {
+         post: "/auth/signup"
+         body: "*"
+      };
+   }
+   rpc Login(LoginRequest) returns (LoginResponse) {
+      option (google.api.http) = {
+         post: "/auth/login"
+         body: "*"
+      };
+   }
+   rpc RefreshToken(RefreshTokenRequest) returns (RefreshTokenResponse) {
+      option (google.api.http) = {
+         post: "/auth/refresh"
+         body: "*"
+      };
+   }
+}
+
+message SignupRequest {
+    string username = 1;
+    string email = 2;
+    string password = 3;
+}
+
+message SignupResponse {
+   int32 user_id = 1;
+   string message = 2;
+}
+
+message LoginRequest {
+    string email = 1;
+    string password = 2;
+}
+
+message LoginResponse {
+    string access_token = 1;
+    string refresh_token = 2;
+    int64 expires_in = 3;
+}
+
+message RefreshTokenRequest {
+    string refresh_token = 1;
+}
+
+message RefreshTokenResponse {
+   string access_token = 1;
+   string refresh_token = 2; // new refresh token(rotated)
+   int64 expires_in = 3;
+}

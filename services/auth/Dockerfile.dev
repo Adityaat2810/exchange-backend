@@ -11,10 +11,12 @@ COPY go.mod go.sum ./
 RUN go mod download
 
 # Copy source code
+COPY proto ./proto
 COPY services/auth ./services/auth
 
 ENV PORT=8080
-EXPOSE 8080
+ENV GRPC_PORT=9090
+EXPOSE 8080 9090
 
 # Use air for hot-reload in dev
 CMD ["air", "-c", "services/auth/.air.toml"]

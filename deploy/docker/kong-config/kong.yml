@@ -1,0 +1,126 @@
+_format_version: "3.0"
+_transform: true
+
+# Consumers for JWT authentication
+consumers:
+  - username: exchange-users
+    custom_id: exchange-users
+
+# JWT credentials for the consumer
+jwt_secrets:
+  - consumer: exchange-users
+    key: exchange-auth-service  # This is the 'iss' claim in the JWT
+    secret: dev-secret-change-in-production
+    algorithm: HS256
+
+services:
+  # Auth Service - gRPC backend (Kong converts HTTP to gRPC)
+  - name: auth-service
+    url: grpc://auth:9090
+    protocol: grpc
+    routes:
+      - name: auth-signup
+        paths:
+          - /auth/signup
+        methods:
+          - POST
+        strip_path: false
+        preserve_host: true
+
+      - name: auth-login
+        paths:
+          - /auth/login
+        methods:
+          - POST
+        strip_path: false
+        preserve_host: true
+
+      - name: auth-refresh
+        paths:
+          - /auth/refresh
+        methods:
+          - POST
+        strip_path: false
+        preserve_host: true
+
+  # Orders Service - gRPC backend (protected, JWT required)
+  - name: orders-service
+    url: grpc://orders:9090
+    protocol: grpc
+    routes:
+      - name: orders-route
+        paths:
+          - /orders
+        strip_path: true
+        preserve_host: true
+
+  # Orders Service - HTTP health check
+  - name: orders-health-service
+    url: http://orders:8081
+    routes:
+      - name: orders-healthz
+        paths:
+          - /orders/healthz
+        strip_path: false
+
+# Plugins configuration
+plugins:
+  # grpc-gateway plugin for auth service (HTTP JSON -> gRPC)
+  - name: grpc-gateway
+    service: auth-service
+    config:
+      proto: /kong/proto/auth.proto
+
+  # grpc-gateway plugin for orders service (HTTP JSON -> gRPC)
+  - name: grpc-gateway
+    service: orders-service
+    config:
+      proto: /kong/proto/orders.proto
+
+  # Global CORS plugin
+  - name: cors
+    config:
+      origins:
+        - "*"
+      methods:
+        - GET
+        - POST
+        - PUT
+        - PATCH
+        - DELETE
+        - OPTIONS
+      headers:
+        - Accept
+        - Authorization
+        - Content-Type
+      exposed_headers:
+        - X-Request-Id
+      credentials: true
+      max_age: 3600
+
+  # Global correlation ID plugin
+  - name: correlation-id
+    config:
+      header_name: X-Request-Id
+      generator: uuid
+      echo_downstream: true
+
+  # Global rate limiting
+  - name: rate-limiting
+    config:
+      minute: 100
+      policy: local
+      fault_tolerant: true
+      hide_client_headers: false
+
+  # JWT plugin for orders service only (protected routes)
+  - name: jwt
+    service: orders-service
+    config:
+      key_claim_name: iss
+      claims_to_verify:
+        - exp
+      header_names:
+        - Authorization
+      run_on_preflight: true
+      anonymous: null

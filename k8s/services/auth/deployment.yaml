@@ -21,10 +21,11 @@ spec:
         - name: auth
           image: exchange-backedn-auth:latest
           ports:
-            - containerPort: 8080
+            - containerPort: 9090
+              name: grpc
           env:
-            - name: PORT
-              value: "8080"
+            - name: GRPC_PORT
+              value: "9090"
             - name: DATABASE_URL
               value: postgres://auth_user:auth_password@postgres-auth:5432/auth_db?sslmode=disable
           resources:
@@ -35,14 +36,12 @@ spec:
               memory: "128Mi"
               cpu: "200m"
           livenessProbe:
-            httpGet:
-              path: /healthz
-              port: 8080
+            grpc:
+              port: 9090
             initialDelaySeconds: 10
             periodSeconds: 10
           readinessProbe:
-            httpGet:
-              path: /healthz
-              port: 8080
+            grpc:
+              port: 9090
             initialDelaySeconds: 5
             periodSeconds: 5

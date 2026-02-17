@@ -1,5 +1,3 @@
-version: "3.9"
-
 services:
   # Kong API Gateway - the only externally accessible service
   kong:
@@ -14,7 +12,15 @@ services:
       - KONG_PROXY_LISTEN=0.0.0.0:8000
       - KONG_DECLARATIVE_CONFIG=/kong/declarative/kong.yml
     volumes:
-      - ./kong/kong.yml:/kong/declarative/kong.yml:ro
+      - type: bind
+        source: ./kong-config
+        target: /kong/declarative
+        read_only: true
+      # Mount proto directory - single source of truth for all proto files
+      - type: bind
+        source: ../../proto
+        target: /kong/proto
+        read_only: true
     ports:
       # Only Kong is exposed externally
       - "8000:8000"   # Proxy port - all API traffic goes here
@@ -38,20 +44,23 @@ services:
       context: ../..
       dockerfile: services/auth/Dockerfile
     image: exchange-backedn-auth:dev
+    hostname: auth
     environment:
-      - PORT=8080
+      - GRPC_PORT=9090
       - DATABASE_URL=postgres://auth_user:auth_password@postgres-auth:5432/auth_db?sslmode=disable
+      - JWT_SECRET=${JWT_SECRET:-dev-secret-change-in-production}
     # No ports exposed - only accessible through Kong gateway
     expose:
-      - "8080"
+      - "9090"
     depends_on:
       postgres-auth:
         condition: service_healthy
     healthcheck:
-      test: ["CMD", "wget", "-q", "--spider", "http://localhost:8080/healthz"]
+      test: ["CMD", "/bin/grpc_health_probe", "-addr=:9090"]
       interval: 10s
       timeout: 5s
       retries: 5
+      start_period: 30s
     networks:
       - exchange-network
 
@@ -61,6 +70,7 @@ services:
       context: ../..
       dockerfile: services/orders/Dockerfile
     image: exchange-backedn-orders:dev
+    hostname: orders
     environment:
       - PORT=8081
       - DATABASE_URL=postgres://orders_user:orders_password@postgres-orders:5432/orders_db?sslmode=disable
@@ -82,6 +92,7 @@ services:
   postgres-auth:
     image: postgres:16-alpine
     restart: always
+    hostname: postgres-auth
     environment:
       - POSTGRES_DB=auth_db
       - POSTGRES_USER=auth_user
@@ -89,7 +100,7 @@ services:
     volumes:
       - postgres_auth_data:/var/lib/postgresql/data
     ports:
-      - "5432:5432"
+      - "5434:5432"
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U auth_user -d auth_db"]
       interval: 5s
@@ -102,6 +113,7 @@ services:
   postgres-orders:
     image: postgres:16-alpine
     restart: always
+    hostname: postgres-orders
     environment:
       - POSTGRES_DB=orders_db
       - POSTGRES_USER=orders_user

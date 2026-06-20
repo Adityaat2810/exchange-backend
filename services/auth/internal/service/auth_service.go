@@ -22,6 +22,7 @@ var (
 	ErrInvalidToken       = errors.New("invalid or expired refresh token")
 )
 
+// Test comment for lazygit 
 // AuthService implements the gRPC AuthService
 type AuthService struct {
 	auth.UnimplementedAuthServiceServer

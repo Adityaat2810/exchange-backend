@@ -23,6 +23,8 @@ var (
 )
 
 // Test comment for lazygit 
+// yo yo honey singh
+
 // AuthService implements the gRPC AuthService
 type AuthService struct {
 	auth.UnimplementedAuthServiceServer
